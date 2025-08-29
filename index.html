@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Bảng điểm Pickleball</title>
+  <style>
+    :root {
+      --font-family: 'Segoe UI', sans-serif;
+      --team-name-bg: #ffffff;
+      --team-name-color: #000000;
+      --score-bg: #e0f7fa;
+      --score-color: #00796b;
+    }
+    body {
+      font-family: var(--font-family);
+      background: #f0f4f8;
+      text-align: center;
+      padding: 30px;
+    }
+    h1 {
+      font-size: 28px;
+      margin-bottom: 10px;
+    }
+    .settings {
+      margin-bottom: 20px;
+    }
+    .settings label {
+      margin-right: 10px;
+    }
+    .team-section {
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+    .team {
+      background: var(--team-name-bg);
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      width: 250px;
+    }
+    .team input {
+      font-size: 18px;
+      font-weight: bold;
+      text-align: center;
+      border: none;
+      background: transparent;
+      width: 100%;
+      color: var(--team-name-color);
+      margin-bottom: 10px;
+    }
+    .score {
+      font-size: 48px;
+      background-color: var(--score-bg);
+      color: var(--score-color);
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+    .controls button {
+      padding: 8px 16px;
+      margin: 5px;
+      font-size: 16px;
+      border: none;
+      border-radius: 6px;
+      background-color: #0077cc;
+      color: white;
+      cursor: pointer;
+    }
+    .serve-icons {
+      font-size: 20px;
+      margin-bottom: 10px;
+    }
+    .global-controls {
+      margin-top: 30px;
+    }
+    .timer {
+      font-size: 32px;
+      margin: 20px 0;
+      color: #0077cc;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Bảng điểm Pickleball 🎾</h1>
+
+  <div class="settings">
+    <label>Chế độ:</label>
+    <select id="gameMode" onchange="updateMode()">
+      <option value="singles">Đánh đơn</option>
+      <option value="doubles">Đánh đôi</option>
+    </select>
+
+    <label>Font chữ:</label>
+    <select onchange="changeFont(this.value)">
+      <option value="'Segoe UI', sans-serif">Segoe UI</option>
+      <option value="'Arial', sans-serif">Arial</option>
+      <option value="'Courier New', monospace">Courier</option>
+    </select>
+
+    <label>Màu chữ tên đội:</label>
+    <input type="color" onchange="setColor('--team-name-color', this.value)">
+    <label>Nền tên đội:</label>
+    <input type="color" onchange="setColor('--team-name-bg', this.value)">
+    <label>Màu chữ điểm:</label>
+    <input type="color" onchange="setColor('--score-color', this.value)">
+    <label>Nền điểm:</label>
+    <input type="color" onchange="setColor('--score-bg', this.value)">
+  </div>
+
+  <div class="timer" id="timerDisplay">00:00</div>
+  <div>
+    <button onclick="startTimer()">▶️ Bắt đầu</button>
+    <button onclick="pauseTimer()">⏸️ Tạm dừng</button>
+    <button onclick="resetTimer()">🔄 Reset giờ</button>
+  </div>
+
+  <div class="team-section">
+    <div class="team">
+      <input type="text" id="teamAName" value="Đội A">
+      <div class="serve-icons" id="serveA">🎾</div>
+      <div class="score" id="scoreA">0</div>
+      <div class="controls">
+        <button onclick="changeScore('A', 1)">+1</button>
+        <button onclick="changeScore('A', -1)">–1</button>
+      </div>
+    </div>
+
+    <div class="team">
+      <input type="text" id="teamBName" value="Đội B">
+      <div class="serve-icons" id="serveB"></div>
+      <div class="score" id="scoreB">0</div>
+      <div class="controls">
+        <button onclick="changeScore('B', 1)">+1</button>
+        <button onclick="changeScore('B', -1)">–1</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="global-controls">
+    <button onclick="switchServe()">🔄 Đổi lượt giao</button>
+    <button onclick="resetScores()">🧹 Reset điểm</button>
+  </div>
+
+  <script>
+    let scoreA = 0;
+    let scoreB = 0;
+    let serveState = 'A';
+    let mode = 'singles';
+    let timer;
+    let time = 0;
+    let running = false;
+
+    function updateServeDisplay() {
+      const serveA = document.getElementById('serveA');
+      const serveB = document.getElementById('serveB');
+
+      if (mode === 'singles') {
+        serveA.textContent = serveState === 'A' ? '🎾' : '';
+        serveB.textContent = serveState === 'B' ? '🎾' : '';
+      } else {
+        serveA.textContent = (serveState === 'A1') ? '🎾 Giao 1' :
+                             (serveState === 'A2') ? '🎾 Giao 2' : '';
+        serveB.textContent = (serveState === 'B1') ? '🎾 Giao 1' :
+                             (serveState === 'B2') ? '🎾 Giao 2' : '';
+      }
+    }
+
+    function switchServe() {
+      if (mode === 'singles') {
+        serveState = serveState === 'A' ? 'B' : 'A';
+      } else {
+        const nextServe = {
+          'A1': 'A2',
+          'A2': 'B1',
+          'B1': 'B2',
+          'B2': 'A1'
+        };
+        serveState = nextServe[serveState] || 'A1';
+      }
+      updateServeDisplay();
+    }
+
+    function changeScore(team, value) {
+      if (team === 'A') scoreA = Math.max(0, scoreA + value);
+      else scoreB = Math.max(0, scoreB + value);
+      document.getElementById('scoreA').textContent = scoreA;
+      document.getElementById('scoreB').textContent = scoreB;
+    }
+
+    function resetScores() {
+      scoreA = 0;
+      scoreB = 0;
+      document.getElementById('scoreA').textContent = scoreA;
+      document.getElementById('scoreB').textContent = scoreB;
+    }
+
+    function updateMode() {
+      mode = document.getElementById('gameMode').value;
+      serveState = mode === 'singles' ? 'A' : 'A1';
+      updateServeDisplay();
+    }
+
+    function setColor(variable, value) {
+      document.documentElement.style.setProperty(variable, value);
+    }
+
+    function changeFont(font) {
+      document.documentElement.style.setProperty('--font-family', font);
+    }
+
+    function startTimer() {
+      if (!running) {
+        running = true;
+        timer = setInterval(() => {
+          time++;
+          const minutes = String(Math.floor(time / 60)).padStart(2, '0');
+          const seconds = String(time % 60).padStart(2, '0');
+          document.getElementById('timerDisplay').textContent = `${minutes}:${seconds}`;
+        }, 1000);
+      }
+    }
+
+    function pauseTimer() {
+      running = false;
+      clearInterval(timer);
+    }
+
+    function resetTimer() {
+      pauseTimer();
+      time = 0;
+      document.getElementById('timerDisplay').textContent = '00:00';
+    }
+
+    // Khởi tạo ban đầu
+    updateServeDisplay();
+  </script>
+</body>
+</html>
